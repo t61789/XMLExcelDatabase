@@ -14,14 +14,14 @@ namespace XMLExcelDatabase
     {
         public static Database instance;
 
-        public readonly string excelPath = AppDomain.CurrentDomain.SetupInformation.ApplicationBase + "temp.xlsx";
+        public readonly string buffDirect = AppDomain.CurrentDomain.SetupInformation.ApplicationBase + "\\buff\\";
 
         static Database()
         {
             instance = new Database();
         }
 
-        public void Read(string path)
+        public void CreateBuff(string path, string buffName)
         {
             XSSFWorkbook workbook = new XSSFWorkbook();
             ISheet iSheet= workbook.CreateSheet();
@@ -48,7 +48,7 @@ namespace XMLExcelDatabase
                 }
             }
 
-            using(FileStream fs = new FileStream(excelPath, FileMode.Create, FileAccess.Write))
+            using(FileStream fs = new FileStream(buffDirect+buffName, FileMode.Create, FileAccess.Write))
             {
                 workbook.Write(fs);
             }
@@ -56,10 +56,10 @@ namespace XMLExcelDatabase
             workbook.Close();
         }
 
-        public void Save(string path)
+        public void Save(string xmlPath,string buffName)
         {
-            XSSFWorkbook workbook=null;
-            using (FileStream fs = new FileStream(excelPath, FileMode.Open,FileAccess.Read))
+            XSSFWorkbook workbook = null;
+            using (FileStream fs = new FileStream(buffDirect+ buffName, FileMode.Open, FileAccess.Read))
             {
                 workbook = new XSSFWorkbook(fs);
             }
@@ -69,7 +69,7 @@ namespace XMLExcelDatabase
             newDoc.Add(new XElement("root"));
 
             XElement curEle = new XElement("fields");
-            if(sheet.GetRowEnumerator().MoveNext())
+            if (sheet.GetRowEnumerator().MoveNext())
                 foreach (var item in sheet.GetRow(0))
                 {
                     string temp = item.StringCellValue;
@@ -81,7 +81,7 @@ namespace XMLExcelDatabase
             curEle = new XElement("rows");
 
             bool jump = true;
-            if (sheet.LastRowNum!=0)
+            if (sheet.LastRowNum != 0)
                 foreach (IRow item in sheet)
                 {
                     if (jump)
@@ -92,13 +92,13 @@ namespace XMLExcelDatabase
 
                     XElement newRow = new XElement("row");
                     for (int i = 0; i < columns.Count; i++)
-                        newRow.Add(new XElement(columns[i],item.GetCell(i)?.ToString()));
+                        newRow.Add(new XElement(columns[i], item.GetCell(i)?.ToString()));
                     curEle.Add(newRow);
                 }
             newDoc.Root.Add(curEle);
 
             workbook.Close();
-            newDoc.Save(path);
+            newDoc.Save(xmlPath);
         }
 
         public void CreateEmpty(string path)
@@ -109,16 +109,27 @@ namespace XMLExcelDatabase
             doc.Root.Add(new XElement("rows"));
             doc.Save(path);
         }
-        public string GetHash(string xmlPath)
+        public string GetHash(string buffName)
         {
+            //string sha256;
+            //SHA256Managed s = new SHA256Managed();
+            //using (FileStream fs = new FileStream(excelPath, FileMode.Open, FileAccess.Read))
+            //{
+            //    sha256 = BitConverter.ToString(s.ComputeHash(fs));
+            //}
+            //return BitConverter.ToString(s.ComputeHash(Encoding.ASCII.GetBytes(sha256 + xmlPath)));
             string sha256;
             SHA256Managed s = new SHA256Managed();
-            using (FileStream fs = new FileStream(excelPath, FileMode.Open, FileAccess.Read))
+            using (FileStream fs = new FileStream(buffDirect+buffName, FileMode.Open, FileAccess.Read))
             {
                 sha256 = BitConverter.ToString(s.ComputeHash(fs));
             }
-            return BitConverter.ToString(s.ComputeHash(Encoding.ASCII.GetBytes(sha256 + xmlPath)));
+            return sha256;
+        }
+
+        public void DeleteBuffFile(string buffName)
+        {
+            File.Delete(buffDirect+buffName);
         }
     }
-    
 }
